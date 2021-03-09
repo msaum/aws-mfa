@@ -35,8 +35,9 @@ The function takes one or two arguments.  By default, you can just send the toke
 and it will use the default profile.  Optionally you can use an aws profile to pick a different profile from the
 `~/.aws/config` / `~/.aws/credentials` files.
 
-`Usage: mfa token-code [profile]`
+To test this you can also source the `mfa.sh` script to load the function:
 
+`# . ./mfa.sh`
 
 At a command prompt run the following command to generate a credential: 
 
