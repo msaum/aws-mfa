@@ -3,17 +3,36 @@
 ###################################################
 AWS_CREDS_CACHE="$HOME/.aws/.credcache"
 
+JQ_CLI=`which jq`
+if [ $? -ne 0 ]; then
+  echo "jq not installed.  Please install jq the CLI JSON Processor"
+  return 1
+fi
+
 if [ -f "${AWS_CREDS_CACHE}" ]; then
      echo -n "Loading ${AWS_CREDS_CACHE}, expiring: "
      . "${AWS_CREDS_CACHE}" > /dev/null
-     echo ${AWS_CREDS_JSON} | jq -r .Credentials.Expiration
+     echo ${AWS_CREDS_JSON} | ${JQ_CLI} -r .Credentials.Expiration
 fi
+
 
 function mfa {
   AWS_CLI=`which aws`
   if [ $? -ne 0 ]; then
     echo "AWS CLI is not installed.  Please install AWS CLI v2"
     echo "https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html"
+    return 1
+  fi
+
+  JQ_CLI=`which jq`
+  if [ $? -ne 0 ]; then
+    echo "jq not installed.  Please install jq the CLI JSON Processor"
+    return 1
+  fi
+
+  TEE_CLI=`which tee`
+  if [ $? -ne 0 ]; then
+    echo "tee not installed.  Please install tee (coreutils in Ubuntu)"
     return 1
   fi
 
@@ -37,23 +56,25 @@ function mfa {
     { "Error: AWS CLI failed to retrieve the MFA ARN for profile ${AWS_PROFILE}" ; return 1 }
 
   echo "Running: ${AWS_CLI} sts get-session-token --output json --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code ${TOKEN_CODE}"
-  CREDS=`${AWS_CLI} sts get-session-token --output json --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code ${TOKEN_CODE} | jq -c`  \
+
+  CREDS=`${AWS_CLI} sts get-session-token --output json --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code ${TOKEN_CODE}` \
     || { "Error: AWS CLI failed to get a credential" ; return 1 }
+  CREDS=`echo ${CREDS} | ${JQ_CLI} -c`
 
   # Write credentials into the cache file
   echo Writing credential file:  ${AWS_CREDS_CACHE}
-  echo "export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`" | tee ${AWS_CREDS_CACHE}
-  echo "export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`"  | tee -a ${AWS_CREDS_CACHE}
-  echo "export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`" | tee -a ${AWS_CREDS_CACHE}
+  echo "export AWS_ACCESS_KEY_ID=`echo $CREDS | ${JQ_CLI} -r .Credentials.AccessKeyId`" | ${TEE_CLI} ${AWS_CREDS_CACHE}
+  echo "export AWS_SECRET_ACCESS_KEY=`echo $CREDS | ${JQ_CLI} -r .Credentials.SecretAccessKey`"  | ${TEE_CLI} -a ${AWS_CREDS_CACHE}
+  echo "export AWS_SESSION_TOKEN=`echo $CREDS | ${JQ_CLI} -r .Credentials.SessionToken`" | ${TEE_CLI} -a ${AWS_CREDS_CACHE}
   echo "export AWS_CREDS_JSON=`echo \'$CREDS\'`"  >> ${AWS_CREDS_CACHE}
   . "${AWS_CREDS_CACHE}" > /dev/null
-  echo "Expiring: `echo ${AWS_CREDS_JSON} | jq -r .Credentials.Expiration`"
+  echo "Expiring: `echo ${AWS_CREDS_JSON} | ${JQ_CLI} -r .Credentials.Expiration`"
 
   # Write creds into specific profile cache
   echo Writing credential file:  ${AWS_CREDS_CACHE}.${AWS_PROFILE}
-  echo "export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`" > ${AWS_CREDS_CACHE}.${AWS_PROFILE}
-  echo "export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`"  >> ${AWS_CREDS_CACHE}.${AWS_PROFILE}
-  echo "export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`" >> ${AWS_CREDS_CACHE}.${AWS_PROFILE}
+  echo "export AWS_ACCESS_KEY_ID=`echo $CREDS | ${JQ_CLI} -r .Credentials.AccessKeyId`" > ${AWS_CREDS_CACHE}.${AWS_PROFILE}
+  echo "export AWS_SECRET_ACCESS_KEY=`echo $CREDS | ${JQ_CLI} -r .Credentials.SecretAccessKey`"  >> ${AWS_CREDS_CACHE}.${AWS_PROFILE}
+  echo "export AWS_SESSION_TOKEN=`echo $CREDS | ${JQ_CLI} -r .Credentials.SessionToken`" >> ${AWS_CREDS_CACHE}.${AWS_PROFILE}
   echo "export AWS_CREDS_JSON=`echo \'$CREDS\'`"  >> ${AWS_CREDS_CACHE}.${AWS_PROFILE}
 }
 
@@ -65,6 +86,11 @@ function mfa_cache {
   return 1
   fi
 
+  JQ_CLI=`which jq`
+  if [ $? -ne 0 ]; then
+    echo "jq not installed.  Please install jq the CLI JSON Processor"
+    return 1
+  fi
   # Validate argument count else die
   [ $# -eq 0 ] && { echo "Usage: $0 profile" ; return 1 }
   [ $# -gt 1 ] && { echo "Usage: $0 profile" ; return 1 }
@@ -75,7 +101,7 @@ function mfa_cache {
   if [ -f "${AWS_CREDS_CACHE}" ]; then
        echo -n "Loading AWS credential cache for profile ${AWS_PROFILE}, expiring: "
        . "${AWS_CREDS_CACHE}" > /dev/null
-       echo ${AWS_CREDS_JSON} | jq -r .Credentials.Expiration
+       echo ${AWS_CREDS_JSON} | ${JQ_CLI} -r .Credentials.Expiration
   else
     echo "Unable to find cache file ${AWS_CREDS_CACHE}"
     return 1
