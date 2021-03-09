@@ -38,7 +38,7 @@ function mfa {
      echo "export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`" | tee ${AWS_CREDS_CACHE}
      echo "export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`"  | tee -a ${AWS_CREDS_CACHE}
      echo "export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`" | tee -a ${AWS_CREDS_CACHE}
-     #echo "export AWS_CREDS_JSON=`echo \'$CREDS\'`"  >> ${AWS_CREDS_CACHE}
+     echo "export AWS_CREDS_JSON=`echo \'$CREDS\'`"  >> ${AWS_CREDS_CACHE}
      . "${AWS_CREDS_CACHE}" > /dev/null
      echo "Expiring: `echo ${AWS_CREDS_JSON} | jq -r .Credentials.Expiration`"
 }
