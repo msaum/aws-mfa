@@ -78,7 +78,7 @@ function mfa_cache {
   AWS_CREDS_CACHE="$HOME/.aws/.credcache.${AWS_PROFILE}"
 
   if [ -f "${AWS_CREDS_CACHE}" ]; then
-       echo -n "Loading AWS credential cache for profile ${AWS_PROFILE}...expiring: "
+       echo -n "Loading AWS credential cache for profile ${AWS_PROFILE}, expiring: "
        . "${AWS_CREDS_CACHE}" > /dev/null
        echo ${AWS_CREDS_JSON} | jq -r .Credentials.Expiration
   else
