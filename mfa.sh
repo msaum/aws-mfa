@@ -24,26 +24,21 @@ function mfa {
   unset AWS_ACCESS_KEY_ID
   unset AWS_SECRET_ACCESS_KEY
   unset AWS_SESSION_TOKEN
+  unset AWS_PROFILE
 
   # Validate argument count else die
   [ $# -eq 0 ] && { echo "Usage: $0 token-code [profile]" ; return 1 }
   [ $# -gt 3 ] && { echo "Usage: $0 token-code [profile]" ; return 1 }
 
-  [ $# -eq 1 ] && { \
-    ARN_OF_MFA=`${AWS_CLI} configure get aws_mfa_device --profile default` && \
-    TOKEN_CODE=$1 && \
-    AWS_PROFILE=default && \
-    echo "Running: ${AWS_CLI} sts get-session-token --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --token-code ${TOKEN_CODE}" && \
-    CREDS=`${AWS_CLI} sts get-session-token --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --token-code ${TOKEN_CODE} | jq -c`  \
-    || { return 1 }}
+  [ $# -eq 1 ] && { AWS_PROFILE="default" && TOKEN_CODE=$1 && }
+  [ $# -eq 2 ] && { TOKEN_CODE=$1 && AWS_PROFILE=$2 }
 
-  [ $# -eq 2 ] && { \
-    ARN_OF_MFA=`${AWS_CLI} configure get aws_mfa_device --profile $2` && \
-    TOKEN_CODE=$1 && \
-    AWS_PROFILE=$2 && \
-    echo "Running: ${AWS_CLI} sts get-session-token --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code $TOKEN_CODE" && \
-    CREDS=`${AWS_CLI} sts get-session-token --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code $TOKEN_CODE | jq -c`  \
-    || { return 1 }}
+  ARN_OF_MFA=`${AWS_CLI} configure get aws_mfa_device --profile ${AWS_PROFILE}` || \
+    { "Error: AWS CLI failed to retrieve the MFA ARN for profile ${AWS_PROFILE}" ; return 1 }
+
+  echo "Running: ${AWS_CLI} sts get-session-token --output json --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code ${TOKEN_CODE}"
+  CREDS=`${AWS_CLI} sts get-session-token --output json --duration-seconds ${DURATION_SECONDS} --serial-number ${ARN_OF_MFA} --profile ${AWS_PROFILE} --token-code ${TOKEN_CODE} | jq -c`  \
+    || { "Error: AWS CLI failed to get a credential" ; return 1 }
 
   # Write credentials into the cache file
   echo Writing credential file:  ${AWS_CREDS_CACHE}
