@@ -39,16 +39,24 @@ To test this you can also source the `mfa.sh` script to load the function:
 
 `# . ./mfa.sh`
 
-At a command prompt run the following command to generate a credential: 
+At a command prompt run the following command to generate a credential:
 
 `# mfa <mfacode> <optional-aws-profile>`
 
-At a command prompt run the following command to load a cached credential for a profile:
+At a command prompt run the following command to load a cached credential for a profile.  
+If a profile isn't specified, the last generated credential is loaded.
 
 `# mfa_cache <aws-profile>`
 
+To see a list of cached credentials:
+
+`# mfa_cache_list`
+
 # Implementation Note
 
-- In using this function/script the last temporary credentials generated will persist across shells that execute
-the shell profile through the use of the cache file.  The last generated credential cache file is stored in `~/.aws/.credcache`.
-- The last generated credential is cached in `~/.aws/.credcache.[AWS_PROFILE]` and can be recalled with the `mfa_cache` command.
+- In using this function/script the last temporary credentials generated will persist across shells that execute the
+  shell profile through the use of the cache file. The last generated credential cache file is stored
+  in `~/.aws/.credcache`.
+- The last generated credential is cached in `~/.aws/.credcache` and can be recalled with the `mfa_cache` command.
+- Cached credentials are not validated to determine if they are still valid.
+
